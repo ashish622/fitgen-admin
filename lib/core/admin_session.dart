@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 /// Capability names; must match functions/platformAdmin.js CAPABILITIES.
@@ -26,20 +27,26 @@ enum SessionStatus { loading, signedOut, notAdmin, admin }
 /// Holds the signed-in admin and their capabilities.
 class AdminSession extends ChangeNotifier {
   AdminSession({FirebaseAuth? auth, FirebaseFunctions? functions})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _functions = functions ?? FirebaseFunctions.instance {
-    _sub = _auth.authStateChanges().listen(_onAuth);
+      : _auth = auth,
+        // ignore: prefer_initializing_formals
+        _functions = functions {
+    if (auth != null || Firebase.apps.isNotEmpty) {
+      _sub = (_auth ?? FirebaseAuth.instance).authStateChanges().listen(_onAuth);
+    } else {
+      status = SessionStatus.signedOut;
+    }
   }
 
-  final FirebaseAuth _auth;
-  final FirebaseFunctions _functions;
-  late final StreamSubscription<User?> _sub;
+  final FirebaseAuth? _auth;
+  final FirebaseFunctions? _functions;
+  StreamSubscription<User?>? _sub;
 
   SessionStatus status = SessionStatus.loading;
   Set<String> capabilities = {};
   String? error;
 
-  User? get user => _auth.currentUser;
+  User? get user =>
+      (_auth ?? (Firebase.apps.isNotEmpty ? FirebaseAuth.instance : null))?.currentUser;
   bool can(String capability) => capabilities.contains(capability);
   bool canAny(Iterable<String> caps) => caps.any(capabilities.contains);
 
@@ -53,7 +60,8 @@ class AdminSession extends ChangeNotifier {
     status = SessionStatus.loading;
     notifyListeners();
     try {
-      final res = await _functions.httpsCallable('adminGetMe').call();
+      final f = _functions ?? FirebaseFunctions.instance;
+      final res = await f.httpsCallable('adminGetMe').call();
       final caps = (res.data['capabilities'] as List).cast<String>();
       capabilities = caps.toSet();
       status = SessionStatus.admin;
@@ -69,14 +77,18 @@ class AdminSession extends ChangeNotifier {
 
   Future<void> signIn(String email, String password) async {
     error = null;
-    await _auth.signInWithEmailAndPassword(email: email, password: password);
+    final a = _auth ?? FirebaseAuth.instance;
+    await a.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() {
+    final a = _auth ?? FirebaseAuth.instance;
+    return a.signOut();
+  }
 
   @override
   void dispose() {
-    _sub.cancel();
+    _sub?.cancel();
     super.dispose();
   }
 }
