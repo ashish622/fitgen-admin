@@ -3,9 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import 'core/admin_api.dart';
 import 'core/admin_session.dart';
+import 'features/admins/presentation/admins_screen.dart';
 import 'features/auth/login_screen.dart';
+import 'features/campaigns/presentation/campaigns_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
+import 'features/feature_flags/presentation/feature_flags_screen.dart';
+import 'features/partners/presentation/partner_detail_screen.dart';
+import 'features/partners/presentation/partners_screen.dart';
+import 'features/plans/presentation/plans_screen.dart';
 import 'features/shell/admin_shell.dart';
+import 'features/support/presentation/support_screen.dart';
 import 'features/users/user_detail_screen.dart';
 import 'features/users/users_screen.dart';
 
@@ -45,7 +52,8 @@ class _AdminAppState extends State<AdminApp> {
             GoRoute(path: '/', builder: (_, _) => const DashboardScreen()),
             GoRoute(
               path: '/users',
-              redirect: (_, _) => session.can(Cap.usersRead) ? null : '/',
+              redirect: (_, _) =>
+                  session.canAny([Cap.usersRead, Cap.usersManage]) ? null : '/',
               builder: (_, _) => UsersScreen(session: session, api: api),
               routes: [
                 GoRoute(
@@ -57,6 +65,57 @@ class _AdminAppState extends State<AdminApp> {
                   ),
                 ),
               ],
+            ),
+            GoRoute(
+              path: '/partners',
+              redirect: (_, _) => session.can(Cap.studioActivation) ? null : '/',
+              builder: (_, _) => PartnersScreen(session: session, api: api),
+              routes: [
+                GoRoute(
+                  path: ':partnerId',
+                  builder: (_, s) => PartnerDetailScreen(
+                    partnerId: s.pathParameters['partnerId']!,
+                    session: session,
+                    api: api,
+                  ),
+                ),
+              ],
+            ),
+            GoRoute(
+              path: '/plans',
+              redirect: (_, _) => session.canAny([
+                Cap.plansManage,
+                Cap.studioActivation,
+                Cap.usersManage,
+              ])
+                  ? null
+                  : '/',
+              builder: (_, _) => PlansScreen(session: session, api: api),
+            ),
+            GoRoute(
+              path: '/campaigns',
+              redirect: (_, _) => session.can(Cap.campaignsManage) ? null : '/',
+              builder: (_, _) => CampaignsScreen(session: session, api: api),
+            ),
+            GoRoute(
+              path: '/support',
+              redirect: (_, _) => session.can(Cap.support) ? null : '/',
+              builder: (_, _) => SupportScreen(session: session, api: api),
+            ),
+            GoRoute(
+              path: '/features',
+              redirect: (_, _) => session.canAny([
+                Cap.featuresManage,
+                Cap.aiConfiguration,
+              ])
+                  ? null
+                  : '/',
+              builder: (_, _) => FeatureFlagsScreen(session: session, api: api),
+            ),
+            GoRoute(
+              path: '/admins',
+              redirect: (_, _) => session.can(Cap.adminsManage) ? null : '/',
+              builder: (_, _) => AdminsScreen(session: session, api: api),
             ),
           ],
         ),

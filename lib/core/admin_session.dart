@@ -8,11 +8,17 @@ import 'package:flutter/foundation.dart';
 class Cap {
   static const usersRead = 'users_read';
   static const usersManage = 'users_manage';
+  static const studioActivation = 'studio_activation';
+  static const plansManage = 'plans_manage';
   static const featuresManage = 'features_manage';
   static const support = 'support';
   static const campaignsManage = 'campaigns_manage';
   static const analyticsRead = 'analytics_read';
   static const adminsManage = 'admins_manage';
+  static const aiConfiguration = 'ai_configuration';
+  static const aiSpendApproval = 'ai_spend_approval';
+  static const platformConfiguration = 'platform_configuration';
+  static const dataMigration = 'data_migration';
 }
 
 enum SessionStatus { loading, signedOut, notAdmin, admin }
@@ -35,6 +41,7 @@ class AdminSession extends ChangeNotifier {
 
   User? get user => _auth.currentUser;
   bool can(String capability) => capabilities.contains(capability);
+  bool canAny(Iterable<String> caps) => caps.any(capabilities.contains);
 
   Future<void> _onAuth(User? user) async {
     if (user == null) {
